@@ -14,6 +14,10 @@ import { fetchLeaderboard, getSupabase, postRun, type LeaderboardRow } from '@/l
 
 type Phase = 'idle' | 'spinning' | 'choose' | 'assign' | 'ready' | 'sim' | 'result';
 
+const TRAIT_CODES: Record<TraitKey, string> = {
+  str: 'ST', pow: 'PW', wre: 'WR', gra: 'GR', car: 'CA', chn: 'DU', iq: 'IQ',
+};
+
 const emptySlots = (): Slots => ({
   str: null, pow: null, wre: null, gra: null, car: null, chn: null, iq: null,
 });
@@ -98,7 +102,7 @@ function Confetti() {
     const c = canvas.getContext('2d');
     if (!c) return;
     c.scale(dpr, dpr);
-    const colors = ['#ffd84d', '#e8b923', '#e3273d', '#f2f0eb', '#43d97b'];
+    const colors = ['#e6cd8d', '#c9a961', '#9c8146', '#e9e9e6'];
     const parts = Array.from({ length: 160 }, () => ({
       x: Math.random() * innerWidth,
       y: -20 - Math.random() * innerHeight,
@@ -281,7 +285,7 @@ export default function Game() {
     if (!result) return;
     try {
       await navigator.clipboard.writeText(shareText(result, slots));
-      showToast('Copied — go flex it 📋');
+      showToast('Result copied to clipboard');
     } catch {
       showToast('Could not copy');
     }
@@ -299,7 +303,7 @@ export default function Game() {
     });
     if (ok) {
       setLbPosted(true);
-      showToast('Posted to the all-time list 🏆');
+      showToast('Posted to the all-time list');
       void fetchLeaderboard().then(setLb);
     } else {
       showToast('Leaderboard unavailable');
@@ -326,8 +330,10 @@ export default function Game() {
           <span className="logo-tag">BUILD THE UNDEFEATED</span>
         </div>
         <div className="header-right">
-          <div className="pb-chip" title="Your best record on this device">PB {pb ?? '—'}</div>
-          <button className="icon-btn" onClick={sound.toggleMute} title="Toggle sound">{sound.muted ? '🔇' : '🔊'}</button>
+          <div className="pb-chip" title="Your best record on this device">BEST {pb ?? '——'}</div>
+          <button className="icon-btn" onClick={sound.toggleMute} title="Toggle sound" aria-label="Toggle sound">
+            {sound.muted ? '×' : '♪'}
+          </button>
           <button className="icon-btn" onClick={() => setShowHelp(true)} title="How it works">?</button>
         </div>
       </header>
@@ -335,6 +341,7 @@ export default function Game() {
       <main className="layout">
         {/* slot machine + pool */}
         <section className="panel machine-panel">
+          <div className="eyebrow"><b>01</b> The Spin</div>
           <div className="machine">
             <div className="reels">
               <div className={`reel ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
@@ -360,13 +367,29 @@ export default function Game() {
             <p className="machine-hint">{hint}</p>
           </div>
 
+          {!combo && (
+            <div className="steps">
+              {[
+                ['01', 'Spin the wheel', 'A random division and era. The pool is whoever was there.'],
+                ['02', 'Steal one trait', 'Seven slots, one trait per fighter. Ratings stay hidden until you lock in.'],
+                ['03', 'Run the table', 'Fifty fights against a deterministic engine. Only a flawless build goes 50–0.'],
+              ].map(([n, h, d]) => (
+                <div className="step" key={n}>
+                  <span className="step-n">{n}</span>
+                  <span className="step-body">
+                    <span className="step-h">{h}</span>
+                    <span className="step-d">{d}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="pool">
-            {combo?.fighters.map(f => {
+            {combo?.fighters.map((f, i) => {
               const used = usedFighters.includes(f.name);
-              const initials = f.name.split(' ').map(w => w[0]).slice(0, 2).join('');
               return (
                 <button key={f.name} className={`pool-card ${used ? 'used' : ''}`} onClick={() => openAssign(f)} disabled={used}>
-                  <span className="pool-ava">{initials}</span>
+                  <span className="pool-ava">{String(i + 1).padStart(2, '0')}</span>
                   <span className="pool-info">
                     <span className="pool-name">{f.name}{f.nick ? <span className="pool-nick"> “{f.nick}”</span> : null}</span>
                     <span className="pool-blurb">{f.blurb}</span>
@@ -380,16 +403,17 @@ export default function Game() {
 
         {/* your fighter */}
         <section className="panel fighter-panel">
+          <div className="eyebrow"><b>02</b> Your Fighter</div>
           <div className="fighter-head">
-            <h2 className="fighter-title">YOUR FIGHTER</h2>
-            <div className="fighter-sub">7 traits · 7 spins · 1 re-roll · no second chances</div>
+            <h2 className="fighter-title">The Build</h2>
+            <div className="fighter-sub">7 traits / 7 spins / 1 re-roll / no second chances</div>
           </div>
           <div className="slots">
             {TRAITS.map(t => {
               const fill = slots[t.key];
               return (
                 <div key={t.key} className={`slot ${fill ? 'filled' : ''} ${flashKey === t.key ? 'flash' : ''}`}>
-                  <div className="slot-icon">{t.icon}</div>
+                  <div className="slot-icon">{TRAIT_CODES[t.key]}</div>
                   <div className="slot-mid">
                     <div className="slot-label">{t.label}</div>
                     <div className="slot-donor">
@@ -399,6 +423,7 @@ export default function Game() {
                   {fill
                     ? <CountUp target={fill.value} className={`slot-val ${valClass(fill.value)}`} />
                     : <span className="slot-val">—</span>}
+                  {fill && <span className="slot-meter" style={{ width: `${fill.value}%` }} />}
                 </div>
               );
             })}
@@ -424,7 +449,7 @@ export default function Game() {
                 const taken = slots[t.key];
                 return (
                   <button key={t.key} className="assign-opt" onClick={() => assign(t.key)} disabled={!!taken}>
-                    <span className="o-icon">{t.icon}</span>
+                    <span className="o-icon">{TRAIT_CODES[t.key]}</span>
                     <span className="o-label">{t.label}</span>
                     {taken
                       ? <span className="o-taken">filled by {taken.donor}</span>
@@ -442,7 +467,8 @@ export default function Game() {
       {phase === 'sim' && (
         <div className="overlay" onClick={() => { skipRef.current = true; }}>
           <div className="sim-wrap">
-            <div className="sim-head">THE RUN — FIGHT {simRows.length} OF {TOTAL_FIGHTS}</div>
+            <div className="sim-progress"><i style={{ width: `${(simRows.length / TOTAL_FIGHTS) * 100}%` }} /></div>
+            <div className="sim-head">Simulating the run — fight <b>{simRows.length}</b> of {TOTAL_FIGHTS}</div>
             <div className="sim-feed">
               {simRows.slice(-12).map(r => (
                 <div key={r.n} className={`sim-row ${r.win ? 'w' : 'l'} ${r.milestone ? 'milestone' : ''}`}>
@@ -464,6 +490,7 @@ export default function Game() {
         <div className="overlay">
           {result.wins === TOTAL_FIGHTS && <Confetti />}
           <div className="result-card">
+            <div className="result-eyebrow">Official result</div>
             <div className={`result-record ${result.wins === TOTAL_FIGHTS ? 'perfect' : ''}`}>
               {result.wins}–{result.losses}
             </div>
@@ -472,10 +499,10 @@ export default function Game() {
             <div className="result-bars">
               {TRAITS.map(t => {
                 const v = slots[t.key]?.value ?? 0;
-                const color = v >= 88 ? 'var(--good)' : v >= 75 ? 'var(--mid)' : 'var(--bad)';
+                const color = v >= 88 ? 'var(--green)' : v >= 75 ? 'var(--gold)' : 'var(--red)';
                 return (
                   <div key={t.key} className="rbar">
-                    <span className="ri">{t.icon}</span>
+                    <span className="ri">{TRAIT_CODES[t.key]}</span>
                     <span className="rl">{t.label}</span>
                     <span className="track"><span className="fill" style={{ width: barsLive ? `${v}%` : 0, background: color }} /></span>
                     <span className="rv" style={{ color }}>{v}</span>
@@ -504,7 +531,7 @@ export default function Game() {
                       <button className="ghost-btn small" onClick={() => void submitToLb()}>POST TO LEADERBOARD</button>
                     </div>
                   )}
-                  <div className="lb-title">🏆 GLOBAL LEADERBOARD</div>
+                  <div className="lb-title">All-time leaderboard</div>
                   <ol className="lb-list">
                     {lb === null && <li className="lb-empty">Loading…</li>}
                     {lb?.length === 0 && <li className="lb-empty">Be the first on the all-time list.</li>}
@@ -518,7 +545,7 @@ export default function Game() {
                   </ol>
                 </>
               ) : (
-                <div className="lb-title">🏆 Leaderboard coming online soon</div>
+                <div className="lb-title">Leaderboard coming online soon</div>
               )}
             </div>
           </div>
@@ -541,7 +568,7 @@ export default function Game() {
       )}
 
       <footer className="site-footer">
-        Inspired by the wheel-spin draft games sweeping sports internet · era-relative ratings · deterministic engine · zero mercy
+        Era-relative ratings — deterministic engine — zero mercy
       </footer>
 
       <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
