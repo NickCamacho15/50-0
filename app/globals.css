@@ -820,10 +820,6 @@ button:disabled { cursor: not-allowed; }
 }
 .footer-link:hover { color: var(--gold-bright); text-decoration: underline; }
 
-/* soccer (38-0) accent — pitch green where the MMA game uses gold dash */
-.soccer-page .logo-dash { color: var(--green); }
-.soccer-page .machine-hint::before { background: var(--green); box-shadow: 0 0 0 3px rgba(69, 212, 131, 0.12); }
-
 /* toast */
 .toast {
   position: fixed; bottom: 28px; left: 50%;

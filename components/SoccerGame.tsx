@@ -19,6 +19,8 @@ const POSITION_CODES: Record<PositionKey, string> = Object.fromEntries(
   POSITIONS.map(p => [p.key, p.code])
 ) as Record<PositionKey, string>;
 
+const CONFETTI_COLORS = ['#0d5c3c', '#c19a2b', '#b03328', '#16271d'];
+
 const emptySlots = (): SoccerSlots => ({
   gk: null, cb: null, fb: null, cm: null, cam: null, wg: null, st: null,
 });
@@ -203,7 +205,7 @@ export default function SoccerGame() {
     }
   };
 
-  const valClass = (v: number) => (v >= 88 ? 'v-good' : v >= 75 ? 'v-mid' : 'v-bad');
+  const valClass = (v: number) => (v >= 88 ? 'good' : v >= 75 ? 'mid' : 'bad');
   const hint =
     phase === 'idle'
       ? filledCount === 0
@@ -218,119 +220,128 @@ export default function SoccerGame() {
           : ' ';
 
   return (
-    <div className="soccer-page">
-      <header className="site-header">
-        <div className="logo">
-          <span className="logo-num">38<span className="logo-dash">–</span>0</span>
-          <span className="logo-tag">CONQUER THE WORLD CUP</span>
+    <>
+      <header className="sc-header">
+        <div className="sc-brand">
+          <span className="sc-brand-mark">38<i>–</i>0</span>
+          <span className="sc-brand-tag">Conquer the World Cup</span>
         </div>
-        <div className="header-right">
-          <div className="pb-chip" title="Your best record on this device">{pb ?? '——'}</div>
-          <button className="icon-btn" onClick={sound.toggleMute} title="Toggle sound" aria-label="Toggle sound">
+        <div className="sc-header-right">
+          <div className="sc-pb" title="Your best record on this device"><b>{pb ?? '——'}</b></div>
+          <button className="sc-iconbtn" onClick={sound.toggleMute} title="Toggle sound" aria-label="Toggle sound">
             {sound.muted ? '×' : '♪'}
           </button>
-          <button className="icon-btn" onClick={() => setShowHelp(true)} title="How it works">?</button>
+          <button className="sc-iconbtn" onClick={() => setShowHelp(true)} title="How it works">?</button>
         </div>
       </header>
 
-      <main className="layout">
-        {/* slot machine + pool */}
-        <section className="panel machine-panel">
-          <div className="card-head">
-            <span className="card-step">01</span>
-            <h2 className="card-title">The Spin</h2>
-          </div>
-          <div className="machine">
-            <div className="reels">
-              <div className={`reel ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
-                <span className="reel-text">{reel.div}</span>
-              </div>
-              <div className={`reel reel-era ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
-                <span className="reel-text">{reel.era}</span>
-              </div>
-            </div>
-            <div className="combo-tag">{reel.tag ? <span>{reel.tag}</span> : null}</div>
-            <div className="machine-controls">
-              <button className="spin-btn" onClick={() => void spin(false)} disabled={phase !== 'idle' && !poolDead}>
-                SPIN
-              </button>
-              <button
-                className="reroll-btn"
-                onClick={() => void spin(true)}
-                disabled={phase !== 'choose' || rerolls === 0}
-              >
-                RE-ROLL <span className="reroll-count">{rerolls}</span>
-              </button>
-            </div>
-            <p className={`machine-hint ${hint.trim() ? '' : 'empty'}`}>{hint}</p>
+      <main className="sc-main">
+        {/* the draw */}
+        <section className="sc-panel">
+          <div className="sc-panel-head">
+            <span className="sc-step">Step 01</span>
+            <h2 className="sc-panel-title">The Draw</h2>
           </div>
 
+          <div className="sc-reels">
+            <div>
+              <span className="sc-reel-cap">Nation</span>
+              <div className={`sc-reel ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
+                <span className="sc-reel-text">{reel.div}</span>
+              </div>
+            </div>
+            <div>
+              <span className="sc-reel-cap">Era</span>
+              <div className={`sc-reel sc-reel-era ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
+                <span className="sc-reel-text">{reel.era}</span>
+              </div>
+            </div>
+          </div>
+          <div className="sc-combo-tag">{reel.tag ? <span>{reel.tag}</span> : null}</div>
+
+          <div className="sc-controls">
+            <button className="sc-spin" onClick={() => void spin(false)} disabled={phase !== 'idle' && !poolDead}>
+              Spin
+            </button>
+            <button
+              className="sc-reroll"
+              onClick={() => void spin(true)}
+              disabled={phase !== 'choose' || rerolls === 0}
+            >
+              Re-roll <span className="sc-reroll-n">{rerolls}</span>
+            </button>
+          </div>
+          <p className={`sc-hint ${hint.trim() ? '' : 'empty'}`}>{hint}</p>
+
           {!combo && filledCount === 0 && (
-            <div className="steps">
+            <div className="sc-steps">
               {[
-                ['01', 'Spin the wheel', 'A random nation and decade. The pool is their World Cup legends.'],
-                ['02', 'Sign one player', 'One player per spin, only where they actually played. Ratings stay hidden until you lock in.'],
-                ['03', 'Run the gauntlet', '38 matches from qualifying to the World Cup final. Only a flawless XI lifts the trophy.'],
+                ['1', 'Spin the wheel', 'A random nation and decade. The pool is their World Cup legends.'],
+                ['2', 'Sign one player', 'One player per spin, only where they actually played. Ratings stay hidden until you lock in.'],
+                ['3', 'Run the gauntlet', '38 matches from qualifying to the World Cup final. Only a flawless XI lifts the trophy.'],
               ].map(([n, h, d]) => (
-                <div className="step" key={n}>
-                  <span className="step-n">{n}</span>
-                  <span className="step-body">
-                    <span className="step-h">{h}</span>
-                    <span className="step-d">{d}</span>
+                <div className="sc-howstep" key={n}>
+                  <span className="sc-howstep-n">{n}</span>
+                  <span className="sc-howstep-body">
+                    <span className="sc-howstep-h">{h}</span>
+                    <span className="sc-howstep-d">{d}</span>
                   </span>
                 </div>
               ))}
             </div>
           )}
-          <div className="pool">
+
+          <div className="sc-pool">
             {combo?.players.map((p, i) => {
               const used = usedPlayers.includes(p.name);
               const noFit = !used && !fitsSomewhere(p);
               return (
-                <button key={p.name} className={`pool-card ${used || noFit ? 'used' : ''}`} onClick={() => openAssign(p)} disabled={used || noFit}>
-                  <span className="pool-ava">{String(i + 1).padStart(2, '0')}</span>
-                  <span className="pool-info">
-                    <span className="pool-name">
-                      {p.name}
-                      <span className="pool-positions">{p.positions.map(k => POSITION_CODES[k]).join('/')}</span>
-                      {p.nick ? <span className="pool-nick"> “{p.nick}”</span> : null}
+                <button key={p.name} className="sc-player" onClick={() => openAssign(p)} disabled={used || noFit}>
+                  <span className="sc-player-num">{String(i + 1).padStart(2, '0')}</span>
+                  <span className="sc-player-info">
+                    <span className="sc-player-top">
+                      <span className="sc-player-name">{p.name}</span>
+                      <span className="sc-player-pos">{p.positions.map(k => POSITION_CODES[k]).join(' · ')}</span>
+                      {p.nick ? <span className="sc-player-nick">“{p.nick}”</span> : null}
                     </span>
-                    <span className="pool-blurb">{p.blurb}</span>
+                    <span className="sc-player-blurb">{p.blurb}</span>
                   </span>
-                  <span className="pool-cta">{used ? 'SIGNED' : noFit ? 'NO FIT' : 'SIGN →'}</span>
+                  <span className="sc-player-cta">{used ? 'Signed' : noFit ? 'No fit' : 'Sign'}</span>
                 </button>
               );
             })}
           </div>
         </section>
 
-        {/* your XI */}
-        <section className="panel fighter-panel">
-          <div className="card-head">
-            <span className="card-step">02</span>
-            <h2 className="card-title">Your XI</h2>
-            <span className="card-meta"><b>{filledCount}</b>/{POSITIONS.length} positions</span>
+        {/* team sheet */}
+        <section className="sc-panel">
+          <div className="sc-panel-head">
+            <span className="sc-step">Step 02</span>
+            <h2 className="sc-panel-title">Team Sheet</h2>
+            <span className="sc-panel-meta"><b>{filledCount}</b>/{POSITIONS.length}</span>
           </div>
-          <div className="fighter-sub">Sign seven legends, one per position. One re-roll, no second chances.</div>
-          <div className="slots">
+          <div className="sc-sheet-sub">Sign seven legends, one per position. One re-roll, no second chances.</div>
+
+          <div className="sc-slots">
             {POSITIONS.map(p => {
               const fill = slots[p.key];
               return (
-                <div key={p.key} className={`slot ${fill ? 'filled' : ''} ${flashKey === p.key ? 'flash' : ''}`}>
-                  <div className="slot-icon">{POSITION_CODES[p.key]}</div>
-                  <div className="slot-mid">
-                    <div className="slot-top">
-                      <span className="slot-label">{p.label}</span>
+                <div key={p.key} className={`sc-slot ${fill ? 'filled' : ''} ${flashKey === p.key ? 'flash' : ''}`}>
+                  <span className="sc-slot-code">{POSITION_CODES[p.key]}</span>
+                  <div className="sc-slot-body">
+                    <div className="sc-slot-line">
+                      <span className="sc-slot-label">{p.label}</span>
+                      <span className="sc-slot-dots" />
                       {fill
-                        ? <CountUp target={fill.value} className={`slot-val ${valClass(fill.value)}`} />
-                        : <span className="slot-val">—</span>}
+                        ? <CountUp target={fill.value} className={`sc-slot-val ${valClass(fill.value)}`} />
+                        : <span className="sc-slot-val">—</span>}
                     </div>
-                    <div className="slot-donor">
-                      {fill ? <>signed <b>{fill.donor}</b> · {fill.combo}</> : p.desc}
+                    <div className="sc-slot-sub">
+                      {fill ? <><b>{fill.donor}</b> · {fill.combo}</> : p.desc}
                     </div>
                     {fill && (
-                      <div className="slot-track">
-                        <i className={fill.value >= 88 ? 't-good' : ''} style={{ width: `${fill.value}%` }} />
+                      <div className="sc-slot-track">
+                        <i style={{ width: `${fill.value}%` }} />
                       </div>
                     )}
                   </div>
@@ -338,134 +349,135 @@ export default function SoccerGame() {
               );
             })}
           </div>
+
           <button
-            className={`fight-btn ${phase === 'ready' ? 'armed' : ''}`}
+            className={`sc-kickoff ${phase === 'ready' ? 'armed' : ''}`}
             onClick={() => void kickOff()}
             disabled={phase !== 'ready'}
           >
             {phase === 'ready'
-              ? <>KICK OFF&nbsp;&nbsp;→&nbsp;&nbsp;38 MATCHES</>
-              : `${POSITIONS.length - filledCount} POSITION${POSITIONS.length - filledCount === 1 ? '' : 'S'} TO FILL`}
+              ? 'Kick off — 38 matches'
+              : `${POSITIONS.length - filledCount} position${POSITIONS.length - filledCount === 1 ? '' : 's'} to fill`}
           </button>
         </section>
       </main>
 
       {/* assign modal */}
       {phase === 'assign' && assignPlayer && (
-        <div className="overlay">
-          <div className="assign-card">
-            <div className="assign-donor">{assignPlayer.name}</div>
-            <div className="assign-q">Sign them where they actually played — the rating is revealed after you lock in.</div>
-            <div className="assign-options">
+        <div className="sc-overlay">
+          <div className="sc-card">
+            <div className="sc-assign-name">{assignPlayer.name}</div>
+            <div className="sc-assign-q">Sign them where they actually played — the rating is revealed after you lock in.</div>
+            <div className="sc-assign-opts">
               {POSITIONS.map(p => {
                 const taken = slots[p.key];
                 const eligible = assignPlayer.positions.includes(p.key);
                 return (
-                  <button key={p.key} className="assign-opt" onClick={() => assign(p.key)} disabled={!!taken || !eligible}>
-                    <span className="o-icon">{POSITION_CODES[p.key]}</span>
-                    <span className="o-label">{p.label}</span>
+                  <button key={p.key} className="sc-opt" onClick={() => assign(p.key)} disabled={!!taken || !eligible}>
+                    <span className="sc-opt-code">{POSITION_CODES[p.key]}</span>
+                    <span className="sc-opt-label">{p.label}</span>
                     {taken
-                      ? <span className="o-taken">filled by {taken.donor}</span>
+                      ? <span className="sc-opt-note">filled by {taken.donor}</span>
                       : eligible
-                        ? <span className="o-hidden">??</span>
-                        : <span className="o-na">not their position</span>}
+                        ? <span className="sc-opt-open">??</span>
+                        : <span className="sc-opt-note">not their position</span>}
                   </button>
                 );
               })}
             </div>
-            <button className="ghost-btn" onClick={() => { setAssignPlayer(null); setPhase('choose'); }}>Back</button>
+            <button className="sc-back" onClick={() => { setAssignPlayer(null); setPhase('choose'); }}>Back</button>
           </div>
         </div>
       )}
 
-      {/* sim feed */}
+      {/* matchday feed */}
       {phase === 'sim' && (
-        <div className="overlay" onClick={() => { skipRef.current = true; }}>
-          <div className="sim-wrap">
-            <div className="sim-progress"><i style={{ width: `${(simRows.length / TOTAL_MATCHES) * 100}%` }} /></div>
-            <div className="sim-head">The road to the final — match <b>{simRows.length}</b> of {TOTAL_MATCHES}</div>
-            <div className="sim-feed">
+        <div className="sc-overlay" onClick={() => { skipRef.current = true; }}>
+          <div className="sc-sim">
+            <div className="sc-sim-progress"><i style={{ width: `${(simRows.length / TOTAL_MATCHES) * 100}%` }} /></div>
+            <div className="sc-sim-head">The road to the final — match <b>{simRows.length}</b> of {TOTAL_MATCHES}</div>
+            <div className="sc-sim-feed">
               {simRows.slice(-12).map(r => (
-                <div key={r.n} className={`sim-row ${r.win ? 'w' : 'l'} ${r.milestone ? 'milestone' : ''}`}>
-                  <span className="n">{r.n}</span>
-                  <span className="opp">
+                <div key={r.n} className={`sc-mrow ${r.win ? 'w' : 'l'} ${r.milestone ? 'milestone' : ''}`}>
+                  <span className="sc-mrow-n">{r.n}</span>
+                  <span className="sc-mrow-opp">
                     {r.milestone ? <small>{r.milestone} · </small> : null}
                     {r.opponent}
                   </span>
-                  <span className="res">{r.win ? `W ${r.score} · ${r.note}` : `L ${r.score} · ${r.note}`}</span>
+                  <span className="sc-mrow-res">{r.win ? `W ${r.score} · ${r.note}` : `L ${r.score} · ${r.note}`}</span>
                 </div>
               ))}
             </div>
-            <div className="sim-skip">Tap anywhere to skip</div>
+            <div className="sc-sim-skip">Tap anywhere to skip</div>
           </div>
         </div>
       )}
 
-      {/* result */}
+      {/* full-time */}
       {phase === 'result' && result && (
-        <div className="overlay">
-          {result.wins === TOTAL_MATCHES && <Confetti />}
-          <div className="result-card">
-            <div className="result-eyebrow">Full-time</div>
-            <div className={`result-record ${result.wins === TOTAL_MATCHES ? 'perfect' : ''}`}>
+        <div className="sc-overlay">
+          {result.wins === TOTAL_MATCHES && <Confetti colors={CONFETTI_COLORS} />}
+          <div className="sc-result">
+            <div className="sc-result-eyebrow">Full-time</div>
+            <div className={`sc-result-record ${result.wins === TOTAL_MATCHES ? 'perfect' : ''}`}>
               {result.wins}–{result.losses}
             </div>
-            <div className="result-verdict">{result.verdict}</div>
-            <div className="result-archetype">{result.archetype}{result.synergy ? <em> · ✦ No-weak-link synergy bonus</em> : null}</div>
-            <div className="result-bars">
+            <div className="sc-result-verdict">{result.verdict}</div>
+            <div className="sc-result-arch">{result.archetype}{result.synergy ? <em> · ✦ no-weak-link bonus</em> : null}</div>
+            <div className="sc-bars">
               {POSITIONS.map(p => {
                 const fill = slots[p.key];
                 const v = fill?.value ?? 0;
                 const color = v >= 88 ? 'var(--green)' : v >= 75 ? 'var(--gold)' : 'var(--red)';
                 return (
-                  <div key={p.key} className="rbar">
-                    <span className="ri">{POSITION_CODES[p.key]}</span>
-                    <span className="rmeta">
-                      <span className="rl">{p.label}</span>
-                      <span className="rdonor">{fill ? fill.donor : '—'}</span>
+                  <div key={p.key} className="sc-bar">
+                    <span className="sc-bar-code">{POSITION_CODES[p.key]}</span>
+                    <span className="sc-bar-meta">
+                      <span className="sc-bar-label">{p.label}</span>
+                      <span className="sc-bar-donor">{fill ? fill.donor : '—'}</span>
                     </span>
-                    <span className="track"><span className="fill" style={{ width: barsLive ? `${v}%` : 0, background: color }} /></span>
-                    <span className="rv" style={{ color }}>{v}</span>
+                    <span className="sc-bar-track"><span className="sc-bar-fill" style={{ width: barsLive ? `${v}%` : 0, background: color }} /></span>
+                    <span className="sc-bar-val" style={{ color }}>{v}</span>
                   </div>
                 );
               })}
             </div>
-            <div className="result-ovr">
-              SQUAD RATING <b>{result.overall}</b> · needs 96+ to lift the trophy
+            <div className="sc-result-ovr">
+              Squad rating <b>{result.overall}</b> · needs 96+ to lift the trophy
             </div>
-            <div className="result-actions">
-              <button className="primary-btn" onClick={() => void share()}>SHARE RESULT</button>
-              <button className="ghost-btn" onClick={runItBack}>RUN IT BACK</button>
+            <div className="sc-result-actions">
+              <button className="sc-btn primary" onClick={() => void share()}>Share result</button>
+              <button className="sc-btn ghost" onClick={runItBack}>Run it back</button>
             </div>
-            <div className="lb-section">
+            <div className="sc-lb">
               {lbAvailable ? (
                 <>
                   {!lbPosted && (
-                    <div className="lb-submit">
+                    <div className="sc-lb-submit">
                       <input
                         value={lbName}
                         onChange={e => setLbName(e.target.value)}
                         maxLength={18}
                         placeholder="Name your nation"
                       />
-                      <button className="ghost-btn small" onClick={() => void submitToLb()}>POST TO LEADERBOARD</button>
+                      <button className="sc-btn ghost small" onClick={() => void submitToLb()}>Post to leaderboard</button>
                     </div>
                   )}
-                  <div className="lb-title">All-time table</div>
-                  <ol className="lb-list">
-                    {lb === null && <li className="lb-empty">Loading…</li>}
-                    {lb?.length === 0 && <li className="lb-empty">Be the first on the all-time table.</li>}
+                  <div className="sc-lb-title">All-time table</div>
+                  <ol className="sc-lb-list">
+                    {lb === null && <li className="sc-lb-empty">Loading…</li>}
+                    {lb?.length === 0 && <li className="sc-lb-empty">Be the first on the all-time table.</li>}
                     {lb?.map((row, i) => (
                       <li key={`${row.squad_name}-${i}`}>
-                        <span className="rank">{i + 1}</span>
-                        <span className="who">{row.squad_name} <small>· {row.archetype}</small></span>
-                        <span className="rec">{row.wins}–{row.losses}</span>
+                        <span className="sc-lb-rank">{i + 1}</span>
+                        <span className="sc-lb-who">{row.squad_name} <small>· {row.archetype}</small></span>
+                        <span className="sc-lb-rec">{row.wins}–{row.losses}</span>
                       </li>
                     ))}
                   </ol>
                 </>
               ) : (
-                <div className="lb-title">Leaderboard coming online soon</div>
+                <div className="sc-lb-title">Leaderboard coming online soon</div>
               )}
             </div>
           </div>
@@ -474,25 +486,25 @@ export default function SoccerGame() {
 
       {/* help */}
       {showHelp && (
-        <div className="overlay" onClick={() => setShowHelp(false)}>
-          <div className="help-card" onClick={e => e.stopPropagation()}>
-            <h2>HOW 38–0 WORKS</h2>
-            <p><strong>The Spin.</strong> Each round, the machine rolls a random <em>nation + decade</em> (e.g. “Brazil, 1958–1970”). You may only sign that country&apos;s World Cup legends from those tournaments. A combo never repeats in a run.</p>
-            <p><strong>The Signing.</strong> Pick one player from the spin and sign them to exactly <em>one</em> of your seven slots — Goalkeeper, Centre-Back, Full-Back, Midfield, Playmaker, Winger or Striker. Players can only fill <em>positions they actually played</em> (no Mbappé in goal), and ratings stay hidden until you lock the pick — so the real question is how good a legend was at it, era against era.</p>
-            <p><strong>One re-roll.</strong> Hate the spin? You get a single re-roll for the whole run. Spend it wisely. And if a spin gives you nobody who plays your open positions, the re-spin is free — a dead pool never costs you.</p>
+        <div className="sc-overlay" onClick={() => setShowHelp(false)}>
+          <div className="sc-card sc-help" onClick={e => e.stopPropagation()}>
+            <h2>How 38–0 works</h2>
+            <p><strong>The Draw.</strong> Each round, the machine rolls a random <em>nation + decade</em> (e.g. “Brazil, 1958–1970”). You may only sign that country&apos;s World Cup legends from those tournaments. A combo never repeats in a run.</p>
+            <p><strong>The Signing.</strong> Pick one player from the draw and sign them to exactly <em>one</em> of your seven slots — Goalkeeper, Centre-Back, Full-Back, Midfield, Playmaker, Winger or Striker. Players can only fill <em>positions they actually played</em> (no Mbappé in goal), and ratings stay hidden until you lock the pick — so the real question is how good a legend was at it, era against era.</p>
+            <p><strong>One re-roll.</strong> Hate the draw? You get a single re-roll for the whole run. Spend it wisely. And if a draw gives you nobody who plays your open positions, the re-spin is free — a dead pool never costs you.</p>
             <p><strong>The Engine.</strong> Your Squad Rating is a weighted blend of all seven positions — Striker 18%, Midfield 16%, Centre-Back 15%, Playmaker 15%, Winger 14%, Goalkeeper 12%, Full-Back 10%. Ratings are <em>era-relative</em>: every legend is graded against their own era&apos;s peers. A balanced XI with no position below 75 earns a synergy bonus; one weak link drags the whole side down.</p>
             <p><strong>The Gauntlet.</strong> Wins are not linear. The engine maps your Squad Rating through a steep win-projection curve across 38 matches — qualifiers first, then a World Cup where every knockout opponent is an all-time giant (Brazil &apos;70, Argentina &apos;86, Spain &apos;10…). Losses always land on the hardest fixtures, so your record tells the story: 36–2 means you fell in the final. Only a flawless XI lifts the trophy. How you win follows your build; how you lose follows your weakest position.</p>
-            <button className="primary-btn" onClick={() => setShowHelp(false)}>GOT IT</button>
+            <button className="sc-btn primary" onClick={() => setShowHelp(false)}>Got it</button>
           </div>
         </div>
       )}
 
-      <footer className="site-footer">
+      <footer className="sc-footer">
         Era-relative ratings — deterministic engine — zero mercy
-        <a className="footer-link" href="/">🥊 Also play: 50–0 — Build the Undefeated</a>
+        <a href="/">🥊 Also play: 50–0 — Build the Undefeated</a>
       </footer>
 
-      <div className={`toast ${toast ? 'show' : ''}`}>{toast}</div>
-    </div>
+      <div className={`sc-toast ${toast ? 'show' : ''}`}>{toast}</div>
+    </>
   );
 }

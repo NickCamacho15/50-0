@@ -73,7 +73,7 @@ export function CountUp({ target, className }: { target: number; className: stri
 }
 
 // ---------- confetti ----------
-export function Confetti() {
+export function Confetti({ colors = ['#f4c95e', '#e7b43c', '#b98a24', '#eef1f7'] }: { colors?: string[] }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current;
@@ -84,7 +84,6 @@ export function Confetti() {
     const c = canvas.getContext('2d');
     if (!c) return;
     c.scale(dpr, dpr);
-    const colors = ['#f4c95e', '#e7b43c', '#b98a24', '#eef1f7'];
     const parts = Array.from({ length: 160 }, () => ({
       x: Math.random() * innerWidth,
       y: -20 - Math.random() * innerHeight,
