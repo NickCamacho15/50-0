@@ -396,6 +396,20 @@ button:disabled { cursor: not-allowed; }
   color: var(--gold); font-size: 12px; font-weight: 500;
   text-transform: none; letter-spacing: 0;
 }
+.pool-positions {
+  display: inline-block;
+  vertical-align: 2px;
+  margin-left: 8px;
+  font-family: var(--mono); font-stretch: 100%;
+  font-size: 9px; font-weight: 600;
+  letter-spacing: 0.1em;
+  color: var(--text-3);
+  background: var(--surface-3);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 2px 6px;
+}
+.pool-card:hover:not(.used) .pool-positions { color: var(--text-2); border-color: var(--line-strong); }
 .pool-blurb {
   color: var(--text-3); font-size: 12px; margin-top: 3px;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -569,6 +583,7 @@ button:disabled { cursor: not-allowed; }
   padding: 4px 11px;
 }
 .assign-opt .o-taken { font-family: var(--mono); font-size: 10px; color: var(--text-3); }
+.assign-opt .o-na { font-family: var(--mono); font-size: 10px; color: var(--text-3); letter-spacing: 0.04em; }
 .assign-card .ghost-btn { margin-top: 20px; width: 100%; }
 
 /* ---------------- SIM FEED ---------------- */
@@ -867,6 +882,7 @@ button:disabled { cursor: not-allowed; }
   .pool-ava { display: none; }
   .pool-name { font-size: 13.5px; }
   .pool-nick { display: block; font-size: 11px; }
+  .pool-positions { font-size: 8px; margin-left: 6px; padding: 1px 5px; }
   .pool-blurb { -webkit-line-clamp: 1; font-size: 11.5px; }
   .pool-cta { font-size: 9px; padding: 6px 11px; }
 

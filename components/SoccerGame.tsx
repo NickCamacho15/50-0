@@ -51,6 +51,13 @@ export default function SoccerGame() {
   const allFilled = filledCount === POSITIONS.length;
   const lbAvailable = typeof window !== 'undefined' && getSupabase() !== null;
 
+  // a player only fits if one of their real positions is still open
+  const fitsSomewhere = (p: Player) => p.positions.some(k => !slots[k]);
+  // dead spin: nobody in the pool can fill any open position — re-spin is free
+  const poolDead =
+    phase === 'choose' && !!combo &&
+    combo.players.every(p => usedPlayers.includes(p.name) || !fitsSomewhere(p));
+
   useEffect(() => { setPb(localStorage.getItem('38-0:pb')); }, []);
 
   const showToast = (msg: string) => {
@@ -63,7 +70,7 @@ export default function SoccerGame() {
     if (isReroll) {
       if (rerolls <= 0 || phase !== 'choose') return;
       setRerolls(r => r - 1);
-    } else if (phase !== 'idle') return;
+    } else if (phase !== 'idle' && !poolDead) return;
 
     const remaining = SOCCER_COMBOS.map((_, i) => i).filter(i => !usedCombos.includes(i));
     if (remaining.length === 0) return;
@@ -91,13 +98,13 @@ export default function SoccerGame() {
 
   // ---------- assign ----------
   const openAssign = (p: Player) => {
-    if (usedPlayers.includes(p.name)) return;
+    if (usedPlayers.includes(p.name) || !fitsSomewhere(p)) return;
     setAssignPlayer(p);
     setPhase('assign');
   };
 
   const assign = (key: PositionKey) => {
-    if (!assignPlayer || !combo || slots[key]) return;
+    if (!assignPlayer || !combo || slots[key] || !assignPlayer.positions.includes(key)) return;
     const fill = {
       value: assignPlayer.ratings[key],
       donor: assignPlayer.name,
@@ -203,7 +210,9 @@ export default function SoccerGame() {
         ? 'Spin to draw a nation + decade. Sign ONE of their World Cup legends to one position.'
         : `${POSITIONS.length - filledCount} position${POSITIONS.length - filledCount === 1 ? '' : 's'} left. Spin again.`
       : phase === 'choose'
-        ? 'Pick a player — ratings stay hidden until you lock in. Trust your football knowledge.'
+        ? poolDead
+          ? 'Dead spin — nobody here plays your open positions. Spin again, on the house.'
+          : 'Pick a player — ratings stay hidden until you lock in. Trust your football knowledge.'
         : phase === 'ready'
           ? 'Your XI is complete. Begin the road to the World Cup.'
           : ' ';
@@ -242,7 +251,7 @@ export default function SoccerGame() {
             </div>
             <div className="combo-tag">{reel.tag ? <span>{reel.tag}</span> : null}</div>
             <div className="machine-controls">
-              <button className="spin-btn" onClick={() => void spin(false)} disabled={phase !== 'idle'}>
+              <button className="spin-btn" onClick={() => void spin(false)} disabled={phase !== 'idle' && !poolDead}>
                 SPIN
               </button>
               <button
@@ -260,7 +269,7 @@ export default function SoccerGame() {
             <div className="steps">
               {[
                 ['01', 'Spin the wheel', 'A random nation and decade. The pool is their World Cup legends.'],
-                ['02', 'Sign one player', 'Seven positions, one player per spin. Ratings stay hidden until you lock in.'],
+                ['02', 'Sign one player', 'One player per spin, only where they actually played. Ratings stay hidden until you lock in.'],
                 ['03', 'Run the gauntlet', '38 matches from qualifying to the World Cup final. Only a flawless XI lifts the trophy.'],
               ].map(([n, h, d]) => (
                 <div className="step" key={n}>
@@ -276,14 +285,19 @@ export default function SoccerGame() {
           <div className="pool">
             {combo?.players.map((p, i) => {
               const used = usedPlayers.includes(p.name);
+              const noFit = !used && !fitsSomewhere(p);
               return (
-                <button key={p.name} className={`pool-card ${used ? 'used' : ''}`} onClick={() => openAssign(p)} disabled={used}>
+                <button key={p.name} className={`pool-card ${used || noFit ? 'used' : ''}`} onClick={() => openAssign(p)} disabled={used || noFit}>
                   <span className="pool-ava">{String(i + 1).padStart(2, '0')}</span>
                   <span className="pool-info">
-                    <span className="pool-name">{p.name}{p.nick ? <span className="pool-nick"> “{p.nick}”</span> : null}</span>
+                    <span className="pool-name">
+                      {p.name}
+                      <span className="pool-positions">{p.positions.map(k => POSITION_CODES[k]).join('/')}</span>
+                      {p.nick ? <span className="pool-nick"> “{p.nick}”</span> : null}
+                    </span>
                     <span className="pool-blurb">{p.blurb}</span>
                   </span>
-                  <span className="pool-cta">{used ? 'SIGNED' : 'SIGN →'}</span>
+                  <span className="pool-cta">{used ? 'SIGNED' : noFit ? 'NO FIT' : 'SIGN →'}</span>
                 </button>
               );
             })}
@@ -341,17 +355,20 @@ export default function SoccerGame() {
         <div className="overlay">
           <div className="assign-card">
             <div className="assign-donor">{assignPlayer.name}</div>
-            <div className="assign-q">Choose their position — the rating is revealed after you lock in. Out of position, even a legend is a liability.</div>
+            <div className="assign-q">Sign them where they actually played — the rating is revealed after you lock in.</div>
             <div className="assign-options">
               {POSITIONS.map(p => {
                 const taken = slots[p.key];
+                const eligible = assignPlayer.positions.includes(p.key);
                 return (
-                  <button key={p.key} className="assign-opt" onClick={() => assign(p.key)} disabled={!!taken}>
+                  <button key={p.key} className="assign-opt" onClick={() => assign(p.key)} disabled={!!taken || !eligible}>
                     <span className="o-icon">{POSITION_CODES[p.key]}</span>
                     <span className="o-label">{p.label}</span>
                     {taken
                       ? <span className="o-taken">filled by {taken.donor}</span>
-                      : <span className="o-hidden">??</span>}
+                      : eligible
+                        ? <span className="o-hidden">??</span>
+                        : <span className="o-na">not their position</span>}
                   </button>
                 );
               })}
@@ -461,8 +478,8 @@ export default function SoccerGame() {
           <div className="help-card" onClick={e => e.stopPropagation()}>
             <h2>HOW 38–0 WORKS</h2>
             <p><strong>The Spin.</strong> Each round, the machine rolls a random <em>nation + decade</em> (e.g. “Brazil, 1958–1970”). You may only sign that country&apos;s World Cup legends from those tournaments. A combo never repeats in a run.</p>
-            <p><strong>The Signing.</strong> Pick one player from the spin and sign them to exactly <em>one</em> of your seven positions — Goalkeeper, Centre-Back, Full-Back, Midfield, Playmaker, Winger or Striker. Every legend is secretly rated at <em>all seven positions</em>, and ratings stay hidden until you lock the pick. Maldini at full-back is a 97. Maldini up front is a problem.</p>
-            <p><strong>One re-roll.</strong> Hate the spin? You get a single re-roll for the whole run. Spend it wisely.</p>
+            <p><strong>The Signing.</strong> Pick one player from the spin and sign them to exactly <em>one</em> of your seven slots — Goalkeeper, Centre-Back, Full-Back, Midfield, Playmaker, Winger or Striker. Players can only fill <em>positions they actually played</em> (no Mbappé in goal), and ratings stay hidden until you lock the pick — so the real question is how good a legend was at it, era against era.</p>
+            <p><strong>One re-roll.</strong> Hate the spin? You get a single re-roll for the whole run. Spend it wisely. And if a spin gives you nobody who plays your open positions, the re-spin is free — a dead pool never costs you.</p>
             <p><strong>The Engine.</strong> Your Squad Rating is a weighted blend of all seven positions — Striker 18%, Midfield 16%, Centre-Back 15%, Playmaker 15%, Winger 14%, Goalkeeper 12%, Full-Back 10%. Ratings are <em>era-relative</em>: every legend is graded against their own era&apos;s peers. A balanced XI with no position below 75 earns a synergy bonus; one weak link drags the whole side down.</p>
             <p><strong>The Gauntlet.</strong> Wins are not linear. The engine maps your Squad Rating through a steep win-projection curve across 38 matches — qualifiers first, then a World Cup where every knockout opponent is an all-time giant (Brazil &apos;70, Argentina &apos;86, Spain &apos;10…). Losses always land on the hardest fixtures, so your record tells the story: 36–2 means you fell in the final. Only a flawless XI lifts the trophy. How you win follows your build; how you lose follows your weakest position.</p>
             <button className="primary-btn" onClick={() => setShowHelp(false)}>GOT IT</button>

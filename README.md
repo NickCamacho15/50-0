@@ -29,7 +29,7 @@ Ratings are **era-relative** (every legend graded against their own era's peers)
 
 ## ⚽ 38–0 — Conquer the World Cup (`/soccer`)
 
-Same engine, new sport. Spin lands on a **nation + decade** (e.g. "Brazil · 1958–1970") and the pool is that country's World Cup legends. Sign one player per spin to one of **seven positions** — GK 12%, CB 15%, FB 10%, CM 16%, Playmaker 15%, Winger 14%, Striker 18%. Every legend is secretly rated at *all seven positions*, so Maldini at full-back is a 97 and Maldini up front is a problem. Then survive a **38-match gauntlet** from qualifying to a World Cup where every knockout opponent is an all-time giant — losses land on the hardest fixtures, so 36–2 means you fell in the final. Leaderboard: `soccer_runs` table.
+Same engine, new sport. Spin lands on a **nation + decade** (e.g. "Brazil · 1958–1970") and the pool is that country's World Cup legends. Sign one player per spin to one of **seven positions** — GK 12%, CB 15%, FB 10%, CM 16%, Playmaker 15%, Winger 14%, Striker 18%. Players can only fill **positions they actually played** (no Mbappé in goal); ratings stay hidden until you lock the pick. If a spin offers nobody who fits your open slots, the re-spin is free. Then survive a **38-match gauntlet** from qualifying to a World Cup where every knockout opponent is an all-time giant — losses land on the hardest fixtures, so 36–2 means you fell in the final. Leaderboard: `soccer_runs` table.
 
 ## Stack
 
