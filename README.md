@@ -27,6 +27,10 @@ wins     = round(50 × min(strength / 96, 1) ^ 2.2)
 
 Ratings are **era-relative** (every legend graded against their own era's peers) and **hidden until you lock a pick** — you draft on fight knowledge, not numbers. The steep curve means only a near-flawless build runs the table. Method of victory follows your build (power → KOs, grappling → subs, cardio/IQ → decisions); how you lose follows your weakest trait.
 
+## ⚽ 38–0 — Conquer the World Cup (`/soccer`)
+
+Same engine, new sport. Spin lands on a **nation + decade** (e.g. "Brazil · 1958–1970") and the pool is that country's World Cup legends. Sign one player per spin to one of **seven positions** — GK 12%, CB 15%, FB 10%, CM 16%, Playmaker 15%, Winger 14%, Striker 18%. Every legend is secretly rated at *all seven positions*, so Maldini at full-back is a 97 and Maldini up front is a problem. Then survive a **38-match gauntlet** from qualifying to a World Cup where every knockout opponent is an all-time giant — losses land on the hardest fixtures, so 36–2 means you fell in the final. Leaderboard: `soccer_runs` table.
+
 ## Stack
 
 - **Next.js 15 + TypeScript** (App Router, fully static page)
