@@ -689,7 +689,13 @@ button:disabled { cursor: not-allowed; }
 }
 .rbar + .rbar { border-top: 1px solid var(--line); }
 .rbar .ri { width: 24px; color: var(--text-3); font-weight: 600; font-size: 10px; }
-.rbar .rl { width: 84px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; }
+.rbar .rmeta { width: 132px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.rbar .rl { color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; font-size: 10px; }
+.rbar .rdonor {
+  font-size: 9.5px; font-weight: 500; letter-spacing: 0.02em;
+  color: var(--gold-soft);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .rbar .track { flex: 1; height: 5px; border-radius: 99px; background: rgba(151, 168, 202, 0.12); overflow: hidden; }
 .rbar .fill { display: block; height: 100%; border-radius: 99px; width: 0; transition: width 0.8s var(--ease); }
 .rbar .rv { width: 30px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -874,7 +880,8 @@ button:disabled { cursor: not-allowed; }
   .result-record { font-size: 58px; }
   .result-verdict { font-size: 16px; }
   .result-bars { padding: 6px 12px; }
-  .rbar .rl { width: 72px; }
+  .rbar .rmeta { width: 104px; }
+  .rbar .rdonor { font-size: 9px; }
   .result-actions { flex-direction: column; }
   .lb-submit { flex-direction: column; }
   .ghost-btn.small { width: 100%; }

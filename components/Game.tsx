@@ -511,12 +511,16 @@ export default function Game() {
             <div className="result-archetype">{result.archetype}{result.synergy ? <em> · ✦ No-holes synergy bonus</em> : null}</div>
             <div className="result-bars">
               {TRAITS.map(t => {
-                const v = slots[t.key]?.value ?? 0;
+                const fill = slots[t.key];
+                const v = fill?.value ?? 0;
                 const color = v >= 88 ? 'var(--green)' : v >= 75 ? 'var(--gold)' : 'var(--red)';
                 return (
                   <div key={t.key} className="rbar">
                     <span className="ri">{TRAIT_CODES[t.key]}</span>
-                    <span className="rl">{t.label}</span>
+                    <span className="rmeta">
+                      <span className="rl">{t.label}</span>
+                      <span className="rdonor">{fill ? fill.donor : '—'}</span>
+                    </span>
                     <span className="track"><span className="fill" style={{ width: barsLive ? `${v}%` : 0, background: color }} /></span>
                     <span className="rv" style={{ color }}>{v}</span>
                   </div>
