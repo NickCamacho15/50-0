@@ -249,6 +249,7 @@ button:disabled { cursor: not-allowed; }
 
 /* ---------------- DRAFT POOL ---------------- */
 .pool { margin-top: 22px; border-top: 1px solid var(--line); }
+.pool:empty { display: none; }
 .pool-card {
   display: flex; align-items: center; gap: 18px;
   width: 100%; text-align: left;
@@ -293,7 +294,11 @@ button:disabled { cursor: not-allowed; }
   color: var(--gold); font-size: 12px; font-weight: 500;
   text-transform: none; letter-spacing: 0;
 }
-.pool-blurb { color: var(--text-3); font-size: 12px; margin-top: 3px; }
+.pool-blurb {
+  color: var(--text-3); font-size: 12px; margin-top: 3px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
 .pool-cta {
   font-family: var(--mono); font-size: 10px; font-weight: 600;
   letter-spacing: 0.18em;
@@ -663,8 +668,78 @@ button:disabled { cursor: not-allowed; }
   .reel { height: 74px; }
   .reel-text { font-size: 19px; }
   .result-record { font-size: 64px; }
-  .machine-controls { grid-template-columns: 1fr; }
-  .reroll-btn { padding: 12px; }
+}
+
+/* phones — app-like full-bleed sections, compact data rows */
+@media (max-width: 640px) {
+  body { font-size: 13px; }
+
+  .site-header { height: 54px; padding: 0 16px; }
+  .logo-num { font-size: 21px; }
+  .pb-chip { font-size: 10px; padding: 5px 10px; }
+  .icon-btn { width: 30px; height: 30px; font-size: 12px; }
+
+  /* panels become full-bleed sections — gain edge-to-edge width */
+  .layout { margin: 0 0 28px; padding: 0; gap: 8px; }
+  .panel {
+    border-left: none; border-right: none; border-radius: 0;
+    padding: 18px 16px 22px;
+  }
+  .eyebrow { margin-bottom: 16px; font-size: 10px; }
+
+  /* reels: shorter, wrap-safe */
+  .reels { grid-template-columns: 1.25fr 1fr; gap: 8px; }
+  .reel { height: 62px; }
+  .reel-text { font-size: 14px; letter-spacing: 0.04em; line-height: 1.1; }
+
+  .combo-tag { margin-top: 10px; font-size: 10px; letter-spacing: 0.18em; }
+  .machine-controls { grid-template-columns: 1fr auto; gap: 8px; margin-top: 14px; }
+  .spin-btn { font-size: 15px; padding: 13px 0; letter-spacing: 0.14em; }
+  .reroll-btn { padding: 0 16px; font-size: 10px; }
+  .machine-hint { font-size: 11.5px; margin-top: 12px; }
+
+  /* idle how-to: headings only — no paragraph clutter */
+  .steps { margin-top: 16px; }
+  .step { padding: 11px 2px; gap: 14px; align-items: center; }
+  .step-h { font-size: 12px; }
+  .step-d { display: none; }
+
+  /* pool rows: tight, single-line blurbs */
+  .pool { margin-top: 16px; }
+  .pool-card { gap: 12px; padding: 12px 2px 12px 10px; }
+  .pool-ava { width: 18px; flex-basis: 18px; font-size: 10px; }
+  .pool-name { font-size: 13px; }
+  .pool-nick { display: block; font-size: 11px; }
+  .pool-blurb { -webkit-line-clamp: 1; font-size: 11px; }
+  .pool-cta { font-size: 9px; padding-right: 6px; }
+
+  /* build panel: scannable one-line rows; trait blurbs only once filled */
+  .fighter-title { font-size: 18px; }
+  .fighter-sub { font-size: 9.5px; margin: 4px 0 16px; }
+  .slot { gap: 12px; padding: 10px 2px; }
+  .slot-icon { width: 26px; height: 26px; flex-basis: 26px; font-size: 9px; }
+  .slot-label { font-size: 12px; }
+  .slot-donor { font-size: 10.5px; }
+  .slot:not(.filled) .slot-donor { display: none; }
+  .slot-val { font-size: 17px; min-width: 36px; }
+  .fight-btn { font-size: 13px; padding: 14px; margin-top: 16px; }
+
+  /* overlays */
+  .overlay { padding: 12px; }
+  .assign-card, .help-card { padding: 22px 18px; }
+  .assign-donor { font-size: 19px; }
+  .assign-opt { padding: 11px 4px; }
+  .sim-wrap { height: 88vh; }
+  .sim-row { padding: 9px 10px; font-size: 11px; gap: 10px; }
+  .result-card { padding: 24px 18px; }
+  .result-record { font-size: 56px; }
+  .result-verdict { font-size: 16px; }
+  .result-actions { flex-direction: column; }
+  .lb-submit { flex-direction: column; }
+  .ghost-btn.small { width: 100%; }
+
+  .site-footer { padding: 16px 16px 32px; font-size: 9px; letter-spacing: 0.1em; }
+  .toast { width: calc(100% - 32px); text-align: center; }
 }
 
 @media (prefers-reduced-motion: reduce) {
