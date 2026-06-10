@@ -102,7 +102,7 @@ function Confetti() {
     const c = canvas.getContext('2d');
     if (!c) return;
     c.scale(dpr, dpr);
-    const colors = ['#e6cd8d', '#c9a961', '#9c8146', '#e9e9e6'];
+    const colors = ['#f4c95e', '#e7b43c', '#b98a24', '#eef1f7'];
     const parts = Array.from({ length: 160 }, () => ({
       x: Math.random() * innerWidth,
       y: -20 - Math.random() * innerHeight,
@@ -147,7 +147,7 @@ export default function Game() {
   const [usedFighters, setUsedFighters] = useState<string[]>([]);
   const [rerolls, setRerolls] = useState(1);
   const [assignFighter, setAssignFighter] = useState<Fighter | null>(null);
-  const [reel, setReel] = useState({ div: 'DIVISION', era: 'ERA', tag: '', landed: false, spinning: false });
+  const [reel, setReel] = useState({ div: '—', era: '—', tag: '', landed: false, spinning: false });
   const [flashKey, setFlashKey] = useState<TraitKey | null>(null);
   const [simRows, setSimRows] = useState<FightRow[]>([]);
   const [result, setResult] = useState<RunResult | null>(null);
@@ -225,7 +225,7 @@ export default function Game() {
     setCombo(null);
     setFlashKey(key);
     sound.thud();
-    setReel({ div: 'DIVISION', era: 'ERA', tag: '', landed: false, spinning: false });
+    setReel({ div: '—', era: '—', tag: '', landed: false, spinning: false });
     const done = TRAITS.every(t => next[t.key]);
     setPhase(done ? 'ready' : 'idle');
   };
@@ -277,7 +277,7 @@ export default function Game() {
     setSimRows([]);
     setResult(null);
     setLbName('');
-    setReel({ div: 'DIVISION', era: 'ERA', tag: '', landed: false, spinning: false });
+    setReel({ div: '—', era: '—', tag: '', landed: false, spinning: false });
     setPhase('idle');
   };
 
@@ -330,7 +330,7 @@ export default function Game() {
           <span className="logo-tag">BUILD THE UNDEFEATED</span>
         </div>
         <div className="header-right">
-          <div className="pb-chip" title="Your best record on this device">BEST {pb ?? '——'}</div>
+          <div className="pb-chip" title="Your best record on this device">{pb ?? '——'}</div>
           <button className="icon-btn" onClick={sound.toggleMute} title="Toggle sound" aria-label="Toggle sound">
             {sound.muted ? '×' : '♪'}
           </button>
@@ -341,7 +341,10 @@ export default function Game() {
       <main className="layout">
         {/* slot machine + pool */}
         <section className="panel machine-panel">
-          <div className="eyebrow"><b>01</b> The Spin</div>
+          <div className="card-head">
+            <span className="card-step">01</span>
+            <h2 className="card-title">The Spin</h2>
+          </div>
           <div className="machine">
             <div className="reels">
               <div className={`reel ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
@@ -351,7 +354,7 @@ export default function Game() {
                 <span className="reel-text">{reel.era}</span>
               </div>
             </div>
-            <div className="combo-tag">{reel.tag || ' '}</div>
+            <div className="combo-tag">{reel.tag ? <span>{reel.tag}</span> : null}</div>
             <div className="machine-controls">
               <button className="spin-btn" onClick={() => void spin(false)} disabled={phase !== 'idle'}>
                 SPIN
@@ -364,10 +367,10 @@ export default function Game() {
                 RE-ROLL <span className="reroll-count">{rerolls}</span>
               </button>
             </div>
-            <p className="machine-hint">{hint}</p>
+            <p className={`machine-hint ${hint.trim() ? '' : 'empty'}`}>{hint}</p>
           </div>
 
-          {!combo && (
+          {!combo && filledCount === 0 && (
             <div className="steps">
               {[
                 ['01', 'Spin the wheel', 'A random division and era. The pool is whoever was there.'],
@@ -403,11 +406,12 @@ export default function Game() {
 
         {/* your fighter */}
         <section className="panel fighter-panel">
-          <div className="eyebrow"><b>02</b> Your Fighter</div>
-          <div className="fighter-head">
-            <h2 className="fighter-title">The Build</h2>
-            <div className="fighter-sub">7 traits / 7 spins / 1 re-roll / no second chances</div>
+          <div className="card-head">
+            <span className="card-step">02</span>
+            <h2 className="card-title">Your Fighter</h2>
+            <span className="card-meta"><b>{filledCount}</b>/{TRAITS.length} traits</span>
           </div>
+          <div className="fighter-sub">Steal seven traits, one per fighter. One re-roll, no second chances.</div>
           <div className="slots">
             {TRAITS.map(t => {
               const fill = slots[t.key];
@@ -415,15 +419,21 @@ export default function Game() {
                 <div key={t.key} className={`slot ${fill ? 'filled' : ''} ${flashKey === t.key ? 'flash' : ''}`}>
                   <div className="slot-icon">{TRAIT_CODES[t.key]}</div>
                   <div className="slot-mid">
-                    <div className="slot-label">{t.label}</div>
+                    <div className="slot-top">
+                      <span className="slot-label">{t.label}</span>
+                      {fill
+                        ? <CountUp target={fill.value} className={`slot-val ${valClass(fill.value)}`} />
+                        : <span className="slot-val">—</span>}
+                    </div>
                     <div className="slot-donor">
                       {fill ? <>from <b>{fill.donor}</b> · {fill.combo}</> : t.desc}
                     </div>
+                    {fill && (
+                      <div className="slot-track">
+                        <i className={fill.value >= 88 ? 't-good' : ''} style={{ width: `${fill.value}%` }} />
+                      </div>
+                    )}
                   </div>
-                  {fill
-                    ? <CountUp target={fill.value} className={`slot-val ${valClass(fill.value)}`} />
-                    : <span className="slot-val">—</span>}
-                  {fill && <span className="slot-meter" style={{ width: `${fill.value}%` }} />}
                 </div>
               );
             })}
@@ -433,7 +443,9 @@ export default function Game() {
             onClick={() => void fight()}
             disabled={phase !== 'ready'}
           >
-            BEGIN THE RUN&nbsp;&nbsp;→&nbsp;&nbsp;50 FIGHTS
+            {phase === 'ready'
+              ? <>BEGIN THE RUN&nbsp;&nbsp;→&nbsp;&nbsp;50 FIGHTS</>
+              : `${TRAITS.length - filledCount} TRAIT${TRAITS.length - filledCount === 1 ? '' : 'S'} TO UNLOCK`}
           </button>
         </section>
       </main>
@@ -443,7 +455,7 @@ export default function Game() {
         <div className="overlay">
           <div className="assign-card">
             <div className="assign-donor">{assignFighter.name}</div>
-            <div className="assign-q">Steal which trait? (Rating revealed after you lock in)</div>
+            <div className="assign-q">Steal one trait — the rating is revealed after you lock in.</div>
             <div className="assign-options">
               {TRAITS.map(t => {
                 const taken = slots[t.key];
@@ -481,6 +493,7 @@ export default function Game() {
                 </div>
               ))}
             </div>
+            <div className="sim-skip">Tap anywhere to skip</div>
           </div>
         </div>
       )}
@@ -495,7 +508,7 @@ export default function Game() {
               {result.wins}–{result.losses}
             </div>
             <div className="result-verdict">{result.verdict}</div>
-            <div className="result-archetype">{result.archetype}{result.synergy ? ' · ✦ NO-HOLES SYNERGY BONUS' : ''}</div>
+            <div className="result-archetype">{result.archetype}{result.synergy ? <em> · ✦ No-holes synergy bonus</em> : null}</div>
             <div className="result-bars">
               {TRAITS.map(t => {
                 const v = slots[t.key]?.value ?? 0;
