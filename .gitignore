@@ -24,3 +24,7 @@ supabase/.branches
 
 # secrets
 .dbpass-temp
+
+# generated ad assets
+ad/*.mp4
+ad/preview/
