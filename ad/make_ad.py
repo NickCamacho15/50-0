@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """
-50-0 — "BUILD THE UNDEFEATED" social ad generator
+50-0 — "BUILD THE UNDEFEATED" social ad generator (v3)
 ===================================================
 Self-contained: renders every frame procedurally with Pillow + NumPy,
 synthesizes the full soundtrack with NumPy, and muxes with FFmpeg.
+
+v3: same flow, script and soundtrack as v2 — visuals restyled to the
+current product UI (layered slate surfaces, ambient gold glow, rounded
+cards, pill chips, gradient-gold buttons).
 
 Output: 1080x1920 (9:16) · 30 fps · ~18.5 s · H.264 + AAC
 
@@ -31,17 +35,23 @@ DUR = 18.5
 N_FRAMES = int(DUR * FPS)
 SR = 44100
 
-# palette (matches the site)
-BG = (10, 10, 15)
-BG_TOP = (28, 20, 36)
-GOLD = (232, 185, 35)
-GOLD_HI = (255, 216, 77)
-GOLD_LO = (201, 146, 14)
-BLOOD = (227, 39, 61)
-WHITE = (242, 240, 235)
-MUTED = (138, 136, 150)
-GREEN = (67, 217, 123)
-PANEL = (17, 17, 26)
+# palette (matches the site design system)
+BG = (13, 16, 23)            # --bg
+BG_TOP = (19, 24, 38)        # --bg-top
+GOLD = (231, 180, 60)        # --gold
+GOLD_HI = (244, 201, 94)     # --gold-bright
+GOLD_LO = (194, 146, 42)
+GOLD_SOFT = (242, 212, 138)  # --gold-soft
+GOLD_INK = (34, 25, 3)       # --gold-ink
+RED = (238, 85, 102)         # --red
+WHITE = (238, 241, 247)      # --text
+MUTED = (163, 174, 196)      # --text-2
+MUTED_2 = (113, 125, 151)    # --text-3
+GREEN = (69, 212, 131)       # --green
+PANEL = (28, 36, 51)         # --surface-2
+PANEL_DEEP = (16, 20, 29)    # reel wells
+LINE = (58, 66, 86)          # --line on surface
+LINE_STRONG = (82, 93, 120)  # --line-strong
 
 # scene boundaries (seconds)
 S1, S2, S3, S4, S5, S6 = (0.0, 2.6), (2.6, 6.4), (6.4, 10.2), (10.2, 13.3), (13.3, 16.6), (16.6, 18.5)
@@ -49,7 +59,7 @@ S1, S2, S3, S4, S5, S6 = (0.0, 2.6), (2.6, 6.4), (6.4, 10.2), (10.2, 13.3), (13.
 # moments that hit (camera shake + audio boom)
 IMPACTS = [0.04, 0.88, 1.72, 5.55, 6.75, 7.85, 8.95, 13.34, 16.64]
 
-URL_TEXT = "50-0.vercel.app"
+URL_TEXT = "50-0.app"
 
 # ------------------------------------------------------------------ fonts --
 def find_font(names):
@@ -148,23 +158,53 @@ def paste_center(canvas, img, cx, cy, scale=1.0, alpha=1.0):
 # -------------------------------------------------------------- background --
 def build_background():
     yy, xx = np.mgrid[0:H, 0:W].astype(np.float32)
-    d = np.sqrt((xx - W / 2) ** 2 + (yy - 320) ** 2) / 1250.0
-    d = np.clip(d, 0, 1) ** 1.2
+    # vertical slate fade, like the site canvas
+    ramp = np.clip(yy / (H * 0.55), 0, 1)[..., None] ** 1.1
     top, bot = np.array(BG_TOP, np.float32), np.array(BG, np.float32)
-    arr = (top[None, None] * (1 - d[..., None]) + bot[None, None] * d[..., None])
+    arr = top[None, None] * (1 - ramp) + bot[None, None] * ramp
+    # ambient gold glow at top center (mirrors the app's radial accent)
+    d = np.sqrt((xx - W / 2) ** 2 + (yy + 160) ** 2)
+    glow = np.clip(1 - d / 1500.0, 0, 1) ** 2
+    arr += np.array(GOLD, np.float32)[None, None] * glow[..., None] * 0.10
     # vignette
     vd = np.sqrt(((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2)
-    vig = 1.0 - 0.32 * np.clip(vd - 0.55, 0, 1) ** 1.6
+    vig = 1.0 - 0.30 * np.clip(vd - 0.55, 0, 1) ** 1.6
     arr *= vig[..., None]
-    img = Image.fromarray(arr.astype(np.uint8)).convert("RGBA")
-    # cage texture
-    cage = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    cd = ImageDraw.Draw(cage)
-    step = 64
-    for i in range(-H, W + H, step):
-        cd.line([(i, 0), (i + H, H)], fill=(255, 255, 255, 7), width=2)
-        cd.line([(i + H, 0), (i, H)], fill=(255, 255, 255, 7), width=2)
-    img.alpha_composite(cage)
+    return Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).convert("RGBA")
+
+# ------------------------------------------------------------ ui primitives --
+_pill_cache = {}
+def gold_button(w, h, radius=30):
+    """Rounded rect filled with the site's vertical gold gradient."""
+    key = (w, h, radius)
+    if key in _pill_cache:
+        return _pill_cache[key]
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=radius, fill=255)
+    hi, lo = np.array(GOLD_HI, np.float32), np.array(GOLD, np.float32)
+    ramp = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
+    grad = (hi[None, None] * (1 - ramp) + lo[None, None] * ramp).astype(np.uint8)
+    img = Image.fromarray(np.repeat(grad, w, axis=1)).convert("RGBA")
+    img.putalpha(mask)
+    _pill_cache[key] = img
+    return img
+
+_chip_cache = {}
+def chip_img(text, size=42):
+    """Gold pill chip with leading dot — matches the app's combo tag."""
+    if text in _chip_cache:
+        return _chip_cache[text]
+    label = text_img(text, size, GOLD, tracking=10)
+    pad_x, pad_y, dot = 38, 22, 12
+    w = label.width + pad_x * 2 + dot + 16
+    h = label.height + pad_y * 2
+    img = Image.new("RGBA", (w, h), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    d.rounded_rectangle([0, 0, w - 1, h - 1], radius=h // 2,
+                        fill=(57, 50, 28, 235), outline=(136, 110, 47, 255), width=3)
+    d.ellipse([pad_x, h // 2 - dot // 2, pad_x + dot, h // 2 + dot // 2], fill=GOLD + (255,))
+    img.alpha_composite(label, (pad_x + dot + 16, pad_y))
+    _chip_cache[text] = img
     return img
 
 # ------------------------------------------------------------------ shake --
@@ -213,9 +253,9 @@ def fight_row_img(i):
     n, name, meth, rnd, tm = FIGHT_ROWS[i]
     img = Image.new("RGBA", (880, 78), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
-    d.rounded_rectangle([0, 0, 879, 77], radius=18, fill=PANEL + (235,),
-                        outline=(255, 255, 255, 18), width=2)
-    d.text((28, 20), f"{n:02d}", font=font(DISPLAY_FONT, 36), fill=MUTED + (255,))
+    d.rounded_rectangle([0, 0, 879, 77], radius=20, fill=PANEL + (235,),
+                        outline=LINE + (255,), width=2)
+    d.text((28, 20), f"{n:02d}", font=font(DISPLAY_FONT, 36), fill=MUTED_2 + (255,))
     d.text((110, 24), f"vs. {name}", font=font(BODY_FONT, 28), fill=WHITE + (255,))
     res = f"W · {meth} · R{rnd} {tm}"
     f2 = font(DISPLAY_FONT, 32)
@@ -225,7 +265,7 @@ def fight_row_img(i):
 
 def build_confetti():
     rng = random.Random(7)
-    cols = [GOLD_HI, GOLD, BLOOD, WHITE, GREEN]
+    cols = [GOLD_HI, GOLD, RED, WHITE, GREEN]
     return [{
         "x": rng.uniform(0, W), "y": rng.uniform(-H, 0),
         "vy": rng.uniform(260, 540), "vx": rng.uniform(-60, 60),
@@ -239,20 +279,21 @@ CONFETTI = build_confetti()
 # ------------------------------------------------------------------ scenes --
 def reel_box(d, cx, cy, w, h, label, landed, flash):
     box = [cx - w // 2, cy - h // 2, cx + w // 2, cy + h // 2]
-    d.rounded_rectangle(box, radius=24, fill=(6, 6, 10, 255),
-                        outline=(GOLD + (255,)) if landed else (255, 255, 255, 40),
+    d.rounded_rectangle(box, radius=28,
+                        fill=((45, 42, 30, 255) if landed else PANEL_DEEP + (255,)),
+                        outline=(GOLD + (255,)) if landed else LINE + (255,),
                         width=4 if landed else 2)
     return box
 
 def draw_scene1(c, t):
-    lines = [("ONE FIGHTER.", 0.0, WHITE, 0), ("SEVEN TRAITS.", 0.84, WHITE, 0), ("ZERO LOSSES?", 1.68, BLOOD, 18)]
+    lines = [("ONE FIGHTER.", 0.0, WHITE, 0), ("SEVEN TRAITS.", 0.84, WHITE, 0), ("ZERO LOSSES?", 1.68, RED, 18)]
     for i, (txt, t0, col, glow) in enumerate(lines):
         if t < t0:
             continue
         p = ease_out((t - t0) / 0.30)
         scale = 2.6 - 1.6 * p
         a = clamp01((t - t0) / 0.12)
-        img = text_img(txt, 150, col, tracking=4, glow=glow, glow_color=BLOOD)
+        img = text_img(txt, 150, col, tracking=4, glow=glow, glow_color=RED)
         paste_center(c, img, W / 2, 640 + i * 290, scale=scale, alpha=a)
 
 def draw_scene2(c, t):
@@ -274,22 +315,22 @@ def draw_scene2(c, t):
         div, era = REEL_TARGET
 
     flash = landed and (t - land_t) < 0.25
-    for cy, txt in ((760, div), (1010, era)):
+    cap_a = ease_out(t / 0.3)
+    for cy, txt, cap in ((760, div, "DIVISION"), (1010, era, "ERA")):
+        paste_center(c, text_img(cap, 26, MUTED_2, tracking=12), W / 2, cy - 138, alpha=cap_a)
         reel_box(d, W // 2, cy, 760, 200, txt, landed, flash)
-        col = GOLD_HI if landed else WHITE
+        col = GOLD_SOFT if landed else WHITE
         img = text_img(txt, 96, col, tracking=4, glow=14 if flash else 0, glow_color=GOLD)
         paste_center(c, img, W / 2, cy, alpha=1.0)
     if landed:
         a = ease_out((t - land_t) / 0.3)
-        tag = text_img("THE KHABIB ERA", 54, BLOOD, tracking=16)
-        paste_center(c, tag, W / 2, 1210, alpha=a)
+        paste_center(c, chip_img("THE KHABIB ERA"), W / 2, 1216, alpha=a)
     # pulsing SPIN button
     pulse = 1 + 0.04 * math.sin(t * 7)
     bw, bh = int(440 * pulse), int(150 * pulse)
     bx, by = W // 2, 1520
-    d.rounded_rectangle([bx - bw // 2, by - bh // 2, bx + bw // 2, by + bh // 2],
-                        radius=30, fill=GOLD + (255,))
-    sp = text_img("SPIN", 92, (26, 18, 6), tracking=10)
+    c.alpha_composite(gold_button(bw, bh, radius=34), (bx - bw // 2, by - bh // 2))
+    sp = text_img("SPIN", 92, GOLD_INK, tracking=10)
     paste_center(c, sp, bx, by - 4, scale=pulse)
 
 def draw_scene3(c, t):
@@ -306,7 +347,7 @@ def draw_scene3(c, t):
         card = Image.new("RGBA", (920, 270), (0, 0, 0, 0))
         cd = ImageDraw.Draw(card)
         cd.rounded_rectangle([0, 0, 919, 269], radius=28, fill=PANEL + (242,),
-                             outline=GOLD + (160,), width=3)
+                             outline=LINE_STRONG + (255,), width=3)
         cd.text((48, 46), trait, font=font(DISPLAY_FONT, 74), fill=WHITE + (255,))
         cd.text((50, 160), src, font=font(BODY_FONT, 30), fill=MUTED + (255,))
         # count-up rating
@@ -362,7 +403,7 @@ def draw_scene5(c, t):
     if t > 0.7:
         a = ease_out((t - 0.7) / 0.3)
         v1 = text_img("UNDEFEATED.", 110, WHITE, tracking=8)
-        v2 = text_img("IMMORTAL.", 110, BLOOD, tracking=8, glow=14, glow_color=BLOOD)
+        v2 = text_img("IMMORTAL.", 110, RED, tracking=8, glow=14, glow_color=RED)
         paste_center(c, v1, W / 2, 1240, alpha=a)
         paste_center(c, v2, W / 2, 1390, alpha=a)
 
@@ -376,13 +417,11 @@ def draw_scene6(c, t):
     paste_center(c, line, W / 2, 930, alpha=a)
     # button
     pulse = 1 + 0.05 * math.sin(t * 8)
-    d = ImageDraw.Draw(c)
     bw, bh = int(560 * pulse), int(160 * pulse)
-    d.rounded_rectangle([W//2 - bw//2, 1180 - bh//2, W//2 + bw//2, 1180 + bh//2],
-                        radius=32, fill=GOLD + (int(255 * a),))
-    btn = text_img("PLAY FREE", 84, (26, 18, 6), tracking=8)
+    paste_center(c, gold_button(bw, bh, radius=36), W / 2, 1180, alpha=a)
+    btn = text_img("PLAY FREE", 84, GOLD_INK, tracking=8)
     paste_center(c, btn, W / 2, 1176, scale=pulse, alpha=a)
-    url = text_img(URL_TEXT, 92, WHITE, glow=10, glow_color=(120, 120, 160))
+    url = text_img(URL_TEXT, 92, WHITE, glow=10, glow_color=(113, 125, 151))
     paste_center(c, url, W / 2, 1430, alpha=a)
 
 SCENES = [(S1, draw_scene1), (S2, draw_scene2), (S3, draw_scene3),
@@ -505,7 +544,7 @@ def write_wav(path, sig):
 
 # ------------------------------------------------------------------- main --
 def main():
-    out_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__) or ".", "50-0-ad.mp4")
+    out_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__) or ".", "50-0-ad-v3.mp4")
     ffmpeg = shutil.which("ffmpeg")
     if not ffmpeg:
         sys.exit("ffmpeg not found on PATH — install it (brew install ffmpeg) and retry.")
