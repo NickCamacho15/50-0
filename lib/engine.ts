@@ -1,20 +1,24 @@
 // ============================================================
 // 50-0 — The Engine
 //
-// Same architecture the research found inside 82-0's bundle:
-// a deterministic weighted blend of trait ratings mapped to
-// wins through a steep non-linear curve. No RNG decides your
-// record — only your draft does. RNG only flavors the fight
-// cards (names, rounds, methods).
+// A deterministic multi-factor model. The headline rating blends
+// weighted skill, a harmonic mean, the two weakest traits, and the
+// weakest phase of the fight. Holes and wild imbalance are penalized.
+// RNG only flavors fight cards; the draft alone decides the record.
 // ============================================================
 
 import { TRAITS, type TraitKey } from './data';
 
 export const TOTAL_FIGHTS = 50;
-const CURVE_DENOM = 96; // strength rating needed for 50-0
-const CURVE_EXP = 2.2;  // punishes weak builds non-linearly
-const SYNERGY_FLOOR = 75;
-const SYNERGY_BONUS = 1.5; // "no holes" bonus — balance matters (the 20-0 lesson)
+export const PERFECT_SCORE = 98.5;
+export const PERFECT_FLOOR = 90;
+export const ELITE_TRAIT = 94;
+export const PERFECT_ELITE_COUNT = 5;
+
+const CURVE_EXP = 3.05;
+const SYNERGY_FLOOR = 82;
+const SYNERGY_MAX_SPREAD = 8;
+const SYNERGY_BONUS = 0.4;
 
 export interface SlotFill {
   value: number;
@@ -39,26 +43,67 @@ export interface RunResult {
   losses: number;
   overall: number;
   synergy: boolean;
+  floor: number;
+  domainFloor: number;
+  eliteTraits: number;
+  perfectEligible: boolean;
   archetype: string;
   verdict: string;
   fights: FightRow[];
 }
 
-export function overallFrom(slots: Slots): { overall: number; synergy: boolean } {
-  let sum = 0;
-  let min = 100;
-  for (const t of TRAITS) {
-    const v = slots[t.key]?.value ?? 0;
-    sum += v * t.weight;
-    min = Math.min(min, v);
-  }
-  const synergy = min >= SYNERGY_FLOOR;
-  const overall = Math.min(100, Math.round((sum + (synergy ? SYNERGY_BONUS : 0)) * 10) / 10);
-  return { overall, synergy };
+export interface ScoreBreakdown {
+  overall: number;
+  synergy: boolean;
+  floor: number;
+  domainFloor: number;
+  eliteTraits: number;
+  perfectEligible: boolean;
 }
 
-export function winsFrom(overall: number): number {
-  return Math.round(TOTAL_FIGHTS * Math.pow(Math.min(overall / CURVE_DENOM, 1), CURVE_EXP));
+const round1 = (n: number) => Math.round(n * 10) / 10;
+
+export function overallFrom(slots: Slots): ScoreBreakdown {
+  const values = TRAITS.map(t => slots[t.key]?.value ?? 0);
+  const sorted = [...values].sort((a, b) => a - b);
+  const weighted = TRAITS.reduce((sum, t) => sum + (slots[t.key]?.value ?? 0) * t.weight, 0);
+  const harmonic = 1 / TRAITS.reduce((sum, t) => {
+    const value = Math.max(slots[t.key]?.value ?? 0, 1);
+    return sum + t.weight / value;
+  }, 0);
+  const weakestTwo = (sorted[0] + sorted[1]) / 2;
+
+  // A fighter must survive every phase. Geometric means stop one
+  // spectacular trait from completely carrying its related phase.
+  const standup = Math.sqrt(values[0] * values[1]);
+  const grappling = Math.sqrt(values[2] * values[3]);
+  const championship = Math.cbrt(values[4] * values[5] * values[6]);
+  const domainFloor = Math.min(standup, grappling, championship);
+
+  const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+  const deviation = Math.sqrt(values.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / values.length);
+  const holePenalty = values.reduce((sum, v) => sum + Math.max(0, SYNERGY_FLOOR - v) * 0.12, 0);
+  const spreadPenalty = Math.max(0, deviation - SYNERGY_MAX_SPREAD) * 0.15;
+  const floor = sorted[0];
+  const eliteTraits = values.filter(v => v >= ELITE_TRAIT).length;
+  const synergy = floor >= SYNERGY_FLOOR && deviation <= SYNERGY_MAX_SPREAD;
+
+  const foundation = weighted * 0.5 + harmonic * 0.25 + weakestTwo * 0.15 + domainFloor * 0.1;
+  const overall = Math.min(99.9, Math.max(0, round1(
+    foundation - holePenalty - spreadPenalty + (synergy ? SYNERGY_BONUS : 0),
+  )));
+  const perfectEligible = overall >= PERFECT_SCORE
+    && floor >= PERFECT_FLOOR
+    && eliteTraits >= PERFECT_ELITE_COUNT;
+
+  return { overall, synergy, floor, domainFloor: round1(domainFloor), eliteTraits, perfectEligible };
+}
+
+export function winsFrom(overall: number, perfectEligible = overall >= PERFECT_SCORE): number {
+  const projected = Math.round(
+    TOTAL_FIGHTS * Math.pow(Math.min(overall / PERFECT_SCORE, 1), CURVE_EXP),
+  );
+  return perfectEligible ? projected : Math.min(TOTAL_FIGHTS - 1, projected);
 }
 
 // ---------- flavor ----------
@@ -74,7 +119,7 @@ const ARCHETYPES: Record<TraitKey, string> = {
 };
 
 export function archetypeFor(slots: Slots, overall: number): string {
-  if (overall >= CURVE_DENOM) return 'THE GOAT — flawless, era-proof, inevitable';
+  if (overall >= PERFECT_SCORE) return 'THE GOAT — flawless, era-proof, inevitable';
   let bestKey: TraitKey = 'str';
   let bestVal = -1;
   for (const t of TRAITS) {
@@ -134,8 +179,9 @@ const LOSS_BY_WEAKNESS: Record<TraitKey, string> = {
 };
 
 export function simulateRun(slots: Slots): RunResult {
-  const { overall, synergy } = overallFrom(slots);
-  const wins = winsFrom(overall);
+  const score = overallFrom(slots);
+  const { overall, synergy, floor, domainFloor, eliteTraits, perfectEligible } = score;
+  const wins = winsFrom(overall, perfectEligible);
   const losses = TOTAL_FIGHTS - wins;
 
   const traitOf = (k: TraitKey) => slots[k]?.value ?? 0;
@@ -211,6 +257,10 @@ export function simulateRun(slots: Slots): RunResult {
     losses,
     overall,
     synergy,
+    floor,
+    domainFloor,
+    eliteTraits,
+    perfectEligible,
     archetype: archetypeFor(slots, overall),
     verdict: verdictFor(wins),
     fights,
@@ -224,7 +274,8 @@ export function shareText(result: RunResult, slots: Slots): string {
   return [
     `50-0 · MY FIGHTER WENT ${result.wins}-${result.losses}${crown}`,
     blocks,
-    `STR ${result.overall} · ${result.verdict}`,
+    `LEGACY ${result.overall} · FLOOR ${result.floor} · ELITE ${result.eliteTraits}/7`,
+    result.verdict,
     'Build yours → 50-0 the game',
   ].join('\n');
 }

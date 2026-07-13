@@ -283,24 +283,4 @@ export const COMBOS: Combo[] = [
       F('Kai Kara-France', '', 'City Kickboxing speed at 125', [88, 86, 60, 62, 84, 80, 76]),
     ],
   },
-  {
-    division: "Women's MMA", era: '2013–2018', tag: 'The Rousey Revolution',
-    fighters: [
-      F('Ronda Rousey', 'Rowdy', 'Olympic judo bronze · 12 straight finishes · armbar inevitability', [60, 74, 91, 95, 70, 66, 70]),
-      F('Amanda Nunes', 'The Lioness', 'Two-division champ · beat every champ before her', [92, 96, 80, 85, 80, 86, 85]),
-      F('Cris Cyborg', '', 'Grand Slam champ across 4 promotions · 13-year unbeaten run', [90, 95, 70, 72, 84, 86, 76]),
-      F('Holly Holm', 'The Preacher\'s Daughter', '18-time boxing world champ · THE head kick at UFC 193', [89, 78, 72, 55, 90, 86, 83]),
-      F('Joanna Jędrzejczyk', '', '5 strawweight defenses · Muay Thai clinic every night', [93, 76, 70, 60, 94, 85, 87]),
-    ],
-  },
-  {
-    division: "Women's MMA", era: '2019–2026', tag: 'The Bullet & Magnum',
-    fighters: [
-      F('Valentina Shevchenko', 'Bullet', 'Most dominant FLW reign ever · Muay Thai world champ', [93, 84, 87, 87, 88, 90, 95]),
-      F('Zhang Weili', 'Magnum', 'China\'s first UFC champ · strongest pound-for-pound athlete at 115', [90, 89, 86, 83, 93, 88, 86]),
-      F('Rose Namajunas', 'Thug Rose', '2× strawweight champ · "I\'m the best!"', [90, 81, 62, 80, 84, 78, 82]),
-      F('Alexa Grasso', '', 'Shocked the Bullet · sharp Mexican boxing', [85, 76, 60, 83, 84, 82, 80]),
-      F('Kayla Harrison', '', '2× Olympic judo GOLD · PFL & UFC champ', [64, 82, 96, 93, 84, 84, 78]),
-    ],
-  },
 ];

@@ -4,6 +4,10 @@ import { useEffect, useRef, useState } from 'react';
 import { CountUp, Confetti, sleep, useSound } from '@/components/shared';
 import { COMBOS, TRAITS, type Combo, type Fighter, type TraitKey } from '@/lib/data';
 import {
+  ELITE_TRAIT,
+  PERFECT_ELITE_COUNT,
+  PERFECT_FLOOR,
+  PERFECT_SCORE,
   TOTAL_FIGHTS,
   simulateRun,
   shareText,
@@ -196,7 +200,7 @@ export default function Game() {
     }
   };
 
-  const valClass = (v: number) => (v >= 88 ? 'v-good' : v >= 75 ? 'v-mid' : 'v-bad');
+  const valClass = (v: number) => (v >= ELITE_TRAIT ? 'v-good' : v >= 82 ? 'v-mid' : 'v-bad');
   const hint =
     phase === 'idle'
       ? filledCount === 0
@@ -212,38 +216,66 @@ export default function Game() {
     <>
       <header className="site-header">
         <div className="logo">
+          <span className="logo-orb" aria-hidden="true"><i /></span>
           <span className="logo-num">50<span className="logo-dash">–</span>0</span>
           <span className="logo-tag">BUILD THE UNDEFEATED</span>
         </div>
         <div className="header-right">
           <div className="pb-chip" title="Your best record on this device">{pb ?? '——'}</div>
           <button className="icon-btn" onClick={sound.toggleMute} title="Toggle sound" aria-label="Toggle sound">
-            {sound.muted ? '×' : '♪'}
+            {sound.muted ? '−' : '♪'}
           </button>
-          <button className="icon-btn" onClick={() => setShowHelp(true)} title="How it works">?</button>
+          <button className="icon-btn" onClick={() => setShowHelp(true)} title="How it works" aria-label="How it works">?</button>
         </div>
       </header>
 
       <main className="layout">
+        <section className="hero">
+          <div className="hero-copy">
+            <div className="hero-eyebrow"><i /> MMA LEGACY LAB</div>
+            <h1>Build the fighter<br /><span>history couldn&apos;t solve.</span></h1>
+            <p>Seven spins. Seven stolen traits. One impossible fifty-fight run.</p>
+          </div>
+          <div className="draft-status" aria-label={`${filledCount} of ${TRAITS.length} traits drafted`}>
+            <div className="draft-status-top"><span>Build sequence</span><b>{filledCount}/{TRAITS.length}</b></div>
+            <div className="draft-dots">
+              {TRAITS.map((trait, index) => (
+                <i key={trait.key} className={index < filledCount ? 'live' : ''} />
+              ))}
+            </div>
+            <small>{phase === 'ready' ? 'Fighter locked. Legacy run ready.' : 'Each selection permanently locks one trait.'}</small>
+          </div>
+        </section>
+
         {/* slot machine + pool */}
         <section className="panel machine-panel">
           <div className="card-head">
             <span className="card-step">01</span>
             <h2 className="card-title">The Spin</h2>
           </div>
-          <div className="machine">
+          <div className={`machine ${reel.spinning ? 'is-spinning' : ''}`}>
+            <div className="machine-topline">
+              <span><i /> Archive draw</span>
+              <b>ROUND {String(Math.min(filledCount + 1, TRAITS.length)).padStart(2, '0')}</b>
+            </div>
             <div className="reels">
-              <div className={`reel ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
-                <span className="reel-text">{reel.div}</span>
+              <div className="reel-unit">
+                <span className="reel-cap">Division</span>
+                <div className={`reel ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
+                  <span className="reel-text">{reel.div}</span>
+                </div>
               </div>
-              <div className={`reel reel-era ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
-                <span className="reel-text">{reel.era}</span>
+              <div className="reel-unit">
+                <span className="reel-cap">Era</span>
+                <div className={`reel reel-era ${reel.spinning ? 'spinning' : ''} ${reel.landed ? 'landed' : ''}`}>
+                  <span className="reel-text">{reel.era}</span>
+                </div>
               </div>
             </div>
             <div className="combo-tag">{reel.tag ? <span>{reel.tag}</span> : null}</div>
             <div className="machine-controls">
               <button className="spin-btn" onClick={() => void spin(false)} disabled={phase !== 'idle'}>
-                SPIN
+                <span>SPIN</span><small>Pull from the archive</small>
               </button>
               <button
                 className="reroll-btn"
@@ -338,9 +370,10 @@ export default function Game() {
 
       {/* assign modal */}
       {phase === 'assign' && assignFighter && (
-        <div className="overlay">
-          <div className="assign-card">
-            <div className="assign-donor">{assignFighter.name}</div>
+        <div className="overlay" role="presentation">
+          <div className="assign-card" role="dialog" aria-modal="true" aria-labelledby="assign-title">
+            <div className="modal-kicker">Trait transfer</div>
+            <div className="assign-donor" id="assign-title">{assignFighter.name}</div>
             <div className="assign-q">Steal one trait — the rating is revealed after you lock in.</div>
             <div className="assign-options">
               {TRAITS.map(t => {
@@ -363,7 +396,7 @@ export default function Game() {
 
       {/* sim feed */}
       {phase === 'sim' && (
-        <div className="overlay" onClick={() => { skipRef.current = true; }}>
+        <div className="overlay" onClick={() => { skipRef.current = true; }} role="presentation">
           <div className="sim-wrap">
             <div className="sim-progress"><i style={{ width: `${(simRows.length / TOTAL_FIGHTS) * 100}%` }} /></div>
             <div className="sim-head">Simulating the run — fight <b>{simRows.length}</b> of {TOTAL_FIGHTS}</div>
@@ -386,20 +419,25 @@ export default function Game() {
 
       {/* result */}
       {phase === 'result' && result && (
-        <div className="overlay">
+        <div className="overlay" role="presentation">
           {result.wins === TOTAL_FIGHTS && <Confetti />}
-          <div className="result-card">
+          <div className="result-card" role="dialog" aria-modal="true" aria-labelledby="result-title">
             <div className="result-eyebrow">Official result</div>
-            <div className={`result-record ${result.wins === TOTAL_FIGHTS ? 'perfect' : ''}`}>
+            <div id="result-title" className={`result-record ${result.wins === TOTAL_FIGHTS ? 'perfect' : ''}`}>
               {result.wins}–{result.losses}
             </div>
             <div className="result-verdict">{result.verdict}</div>
-            <div className="result-archetype">{result.archetype}{result.synergy ? <em> · ✦ No-holes synergy bonus</em> : null}</div>
+            <div className="result-archetype">{result.archetype}{result.synergy ? <em> · Balanced build</em> : null}</div>
+            <div className="result-score-grid">
+              <div><span>Legacy score</span><b>{result.overall}</b></div>
+              <div><span>Trait floor</span><b>{result.floor}</b></div>
+              <div><span>Elite traits</span><b>{result.eliteTraits}<small>/7</small></b></div>
+            </div>
             <div className="result-bars">
               {TRAITS.map(t => {
                 const fill = slots[t.key];
                 const v = fill?.value ?? 0;
-                const color = v >= 88 ? 'var(--green)' : v >= 75 ? 'var(--gold)' : 'var(--red)';
+                const color = v >= ELITE_TRAIT ? 'var(--green)' : v >= 82 ? 'var(--gold)' : 'var(--red)';
                 return (
                   <div key={t.key} className="rbar">
                     <span className="ri">{TRAIT_CODES[t.key]}</span>
@@ -413,8 +451,15 @@ export default function Game() {
                 );
               })}
             </div>
+            <div className="result-gates">
+              <span className={result.overall >= PERFECT_SCORE ? 'pass' : ''}>Score {PERFECT_SCORE}+</span>
+              <span className={result.floor >= PERFECT_FLOOR ? 'pass' : ''}>Floor {PERFECT_FLOOR}+</span>
+              <span className={result.eliteTraits >= PERFECT_ELITE_COUNT ? 'pass' : ''}>{PERFECT_ELITE_COUNT} elite traits</span>
+            </div>
             <div className="result-ovr">
-              STRENGTH RATING <b>{result.overall}</b> · needs 96+ to run the table
+              {result.perfectEligible
+                ? 'PERFECT PROTOCOL CLEARED · NO CAPS APPLIED'
+                : '50–0 REQUIRES ALL THREE PERFECT PROTOCOL GATES'}
             </div>
             <div className="result-actions">
               <button className="primary-btn" onClick={() => void share()}>SHARE RESULT</button>
@@ -457,21 +502,23 @@ export default function Game() {
 
       {/* help */}
       {showHelp && (
-        <div className="overlay" onClick={() => setShowHelp(false)}>
-          <div className="help-card" onClick={e => e.stopPropagation()}>
-            <h2>HOW 50–0 WORKS</h2>
+        <div className="overlay" onClick={() => setShowHelp(false)} role="presentation">
+          <div className="help-card" onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="help-title">
+            <div className="modal-kicker">Rules of the run</div>
+            <h2 id="help-title">HOW 50–0 WORKS</h2>
             <p><strong>The Spin.</strong> Each round, the machine rolls a random <em>division + era</em> (e.g. “Lightweight, 2016–2021”). You may only draft from fighters who competed in that division during that window. A combo never repeats in a run.</p>
             <p><strong>The Steal.</strong> Pick one fighter from the spin and steal exactly <em>one</em> of their seven traits — Striking, KO Power, Wrestling, Grappling, Cardio, Durability or Fight IQ. Ratings are hidden until you lock the pick: infer them from the résumé, the era, and your fight knowledge.</p>
             <p><strong>One re-roll.</strong> Hate the spin? You get a single re-roll for the whole run. Spend it wisely.</p>
-            <p><strong>The Engine.</strong> Your fighter&apos;s Strength Rating is a weighted blend of all seven traits — Striking 20%, Wrestling 18%, KO Power 15%, Grappling 15%, Cardio 12%, Durability 10%, Fight IQ 10%. Ratings are <em>era-relative</em>: every legend is graded against their own era&apos;s peers. A balanced fighter with no trait below 75 earns a synergy bonus; one weak trait drags the whole rating down.</p>
-            <p><strong>The Curve.</strong> Wins are not linear. The engine maps your Strength Rating through a steep win-projection curve across 50 simulated fights — only a near-flawless build runs the table. Method of victory follows your build: power punchers knock people out, grapplers strangle them, marathoners win on the cards. How you lose follows your weakest trait.</p>
+            <p><strong>The Engine.</strong> The Legacy Score blends weighted skill, a harmonic mean, your two weakest traits, and your weakest fight phase: stand-up, grappling, or championship survival. Ratings are <em>era-relative</em>. Any trait under 82 creates a hole; extreme imbalance is penalized.</p>
+            <p><strong>The Perfect Protocol.</strong> A rounded projection is never allowed to hand out a cheap 50–0. Perfection requires a {PERFECT_SCORE}+ Legacy Score, no trait below {PERFECT_FLOOR}, and at least {PERFECT_ELITE_COUNT} traits rated {ELITE_TRAIT}+. Miss any gate and the ceiling is 49 wins.</p>
+            <p><strong>The Curve.</strong> Records follow a steep non-linear curve. Method of victory follows your build: power punchers knock people out, grapplers strangle them, marathoners win on the cards. How you lose follows your weakest trait.</p>
             <button className="primary-btn" onClick={() => setShowHelp(false)}>GOT IT</button>
           </div>
         </div>
       )}
 
       <footer className="site-footer">
-        Era-relative ratings — deterministic engine — zero mercy
+        Era-relative ratings · deterministic engine · perfect protocol
         <a className="footer-link" href="/soccer">⚽ New: 38–0 — Conquer the World Cup</a>
       </footer>
 
